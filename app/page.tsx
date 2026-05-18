@@ -30,10 +30,23 @@ type Avion = {
   estado: string;
 };
 
+type Viaje = {
+  id: number;
+  usuario_id: string;
+  origen: string;
+  destino: string;
+  fecha: string;
+  tipo: string;
+  estado: string;
+  aeronave: string;
+  precio: number;
+};
+
 export default function AdminPage() {
   const [tab, setTab] = useState('empty-legs');
   const [vuelos, setVuelos] = useState<EmptyLeg[]>([]);
   const [flota, setFlota] = useState<Avion[]>([]);
+  const [viajes, setViajes] = useState<Viaje[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [vueloForm, setVueloForm] = useState({ origen: '', destino: '', fecha: '', hora: '', precio_asiento: '', precio_cabina: '', aeronave: '', asientos: '8' });
@@ -42,6 +55,7 @@ export default function AdminPage() {
   useEffect(() => {
     fetchVuelos();
     fetchFlota();
+    fetchViajes();
   }, []);
 
   const fetchVuelos = async () => {
@@ -53,6 +67,11 @@ export default function AdminPage() {
   const fetchFlota = async () => {
     const { data } = await supabase.from('flota').select('*').order('modelo', { ascending: true });
     if (data) setFlota(data);
+  };
+
+  const fetchViajes = async () => {
+    const { data } = await supabase.from('viajes').select('*').order('fecha', { ascending: false });
+    if (data) setViajes(data);
   };
 
   const handleVueloSubmit = async (e: React.FormEvent) => {
@@ -88,25 +107,37 @@ export default function AdminPage() {
     fetchVuelos();
   };
 
+  const handleEstadoViaje = async (id: number, estado: string) => {
+    await supabase.from('viajes').update({ estado }).eq('id', id);
+    fetchViajes();
+  };
+
   const inputStyle = { width: '100%', backgroundColor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '12px 14px', color: 'white', fontSize: 14, boxSizing: 'border-box' as const };
   const labelStyle = { display: 'block', fontSize: 11, color: 'rgba(255,255,255,0.4)', marginBottom: 6, letterSpacing: 1 };
 
+  const estadoColor: Record<string, string> = {
+    confirmado: '#4CAF50',
+    en_proceso: '#C9A84C',
+    completado: '#666',
+    cancelado: '#f44336',
+  };
+
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#0D1B2A', color: 'white', fontFamily: 'Arial, sans-serif' }}>
-      {/* Header */}
       <div style={{ backgroundColor: '#1B2A4A', padding: '20px 32px', borderBottom: '1px solid rgba(201,168,76,0.2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h1 style={{ margin: 0, fontSize: 24, fontWeight: 300, letterSpacing: 4 }}>PATRIOT</h1>
           <p style={{ margin: 0, fontSize: 10, color: '#C9A84C', letterSpacing: 6 }}>AVIATION ADMIN</p>
         </div>
-        <button onClick={() => setShowForm(!showForm)} style={{ backgroundColor: '#C9A84C', color: '#1B2A4A', border: 'none', padding: '12px 24px', borderRadius: 8, fontWeight: 700, cursor: 'pointer', fontSize: 14 }}>
-          {showForm ? 'Cancelar' : tab === 'empty-legs' ? '+ Nuevo Empty Leg' : '+ Nueva Aeronave'}
-        </button>
+        {tab !== 'viajes' && (
+          <button onClick={() => setShowForm(!showForm)} style={{ backgroundColor: '#C9A84C', color: '#1B2A4A', border: 'none', padding: '12px 24px', borderRadius: 8, fontWeight: 700, cursor: 'pointer', fontSize: 14 }}>
+            {showForm ? 'Cancelar' : tab === 'empty-legs' ? '+ Nuevo Empty Leg' : '+ Nueva Aeronave'}
+          </button>
+        )}
       </div>
 
-      {/* Tabs */}
       <div style={{ display: 'flex', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingLeft: 32 }}>
-        {[{ key: 'empty-legs', label: 'Empty Legs' }, { key: 'flota', label: 'Nuestra Flota' }].map(t => (
+        {[{ key: 'empty-legs', label: 'Empty Legs' }, { key: 'flota', label: 'Nuestra Flota' }, { key: 'viajes', label: 'Viajes' }].map(t => (
           <button key={t.key} onClick={() => { setTab(t.key); setShowForm(false); }} style={{ padding: '16px 24px', border: 'none', backgroundColor: 'transparent', color: tab === t.key ? '#C9A84C' : 'rgba(255,255,255,0.4)', borderBottom: tab === t.key ? '2px solid #C9A84C' : '2px solid transparent', cursor: 'pointer', fontSize: 13, fontWeight: tab === t.key ? 700 : 400, letterSpacing: 1 }}>
             {t.label}
           </button>
@@ -114,7 +145,6 @@ export default function AdminPage() {
       </div>
 
       <div style={{ padding: '32px' }}>
-        {/* Empty Legs Form */}
         {showForm && tab === 'empty-legs' && (
           <form onSubmit={handleVueloSubmit} style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(201,168,76,0.2)', borderRadius: 12, padding: 24, marginBottom: 32 }}>
             <h2 style={{ margin: '0 0 20px', fontSize: 18, color: '#C9A84C' }}>Nuevo Empty Leg</h2>
@@ -130,7 +160,6 @@ export default function AdminPage() {
           </form>
         )}
 
-        {/* Flota Form */}
         {showForm && tab === 'flota' && (
           <form onSubmit={handleAvionSubmit} style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(201,168,76,0.2)', borderRadius: 12, padding: 24, marginBottom: 32 }}>
             <h2 style={{ margin: '0 0 20px', fontSize: 18, color: '#C9A84C' }}>Nueva Aeronave</h2>
@@ -166,7 +195,6 @@ export default function AdminPage() {
           </form>
         )}
 
-        {/* Empty Legs Table */}
         {tab === 'empty-legs' && (
           <>
             <h2 style={{ fontSize: 18, color: 'rgba(255,255,255,0.5)', marginBottom: 16, fontWeight: 300 }}>Empty Legs ({vuelos.length})</h2>
@@ -207,7 +235,6 @@ export default function AdminPage() {
           </>
         )}
 
-        {/* Flota Table */}
         {tab === 'flota' && (
           <>
             <h2 style={{ fontSize: 18, color: 'rgba(255,255,255,0.5)', marginBottom: 16, fontWeight: 300 }}>Flota ({flota.length})</h2>
@@ -234,6 +261,45 @@ export default function AdminPage() {
                       <td style={{ padding: '14px 16px' }}>
                         <button onClick={() => handleDeleteAvion(a.id)} style={{ backgroundColor: 'rgba(244,67,54,0.1)', color: '#f44336', border: '1px solid rgba(244,67,54,0.3)', borderRadius: 6, padding: '6px 12px', cursor: 'pointer', fontSize: 12 }}>Eliminar</button>
                       </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+
+        {tab === 'viajes' && (
+          <>
+            <h2 style={{ fontSize: 18, color: 'rgba(255,255,255,0.5)', marginBottom: 16, fontWeight: 300 }}>Viajes ({viajes.length})</h2>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid rgba(201,168,76,0.2)' }}>
+                    {['Ruta', 'Fecha', 'Tipo', 'Aeronave', 'Precio', 'Estado', 'Acciones'].map(h => (
+                      <th key={h} style={{ textAlign: 'left', padding: '12px 16px', fontSize: 10, color: '#C9A84C', letterSpacing: 2 }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {viajes.length === 0 ? (
+                    <tr><td colSpan={7} style={{ padding: '24px 16px', color: 'rgba(255,255,255,0.3)', textAlign: 'center' }}>No hay viajes registrados</td></tr>
+                  ) : viajes.map(v => (
+                    <tr key={v.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                      <td style={{ padding: '14px 16px', fontWeight: 500 }}>{v.origen} → {v.destino}</td>
+                      <td style={{ padding: '14px 16px', color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>{v.fecha}</td>
+                      <td style={{ padding: '14px 16px', color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>{v.tipo}</td>
+                      <td style={{ padding: '14px 16px', color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>{v.aeronave}</td>
+                      <td style={{ padding: '14px 16px', color: '#C9A84C', fontSize: 13 }}>{v.precio > 0 ? `$${v.precio} USD` : '-'}</td>
+                      <td style={{ padding: '14px 16px' }}>
+                        <select value={v.estado} onChange={e => handleEstadoViaje(v.id, e.target.value)} style={{ backgroundColor: '#1B2A4A', color: estadoColor[v.estado] || '#fff', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6, padding: '4px 8px', fontSize: 12, cursor: 'pointer' }}>
+                          <option value="en_proceso">En proceso</option>
+                          <option value="confirmado">Confirmado</option>
+                          <option value="completado">Completado</option>
+                          <option value="cancelado">Cancelado</option>
+                        </select>
+                      </td>
+                      <td style={{ padding: '14px 16px', fontSize: 13, color: 'rgba(255,255,255,0.3)', fontSize: 11 }}>{v.usuario_id?.slice(0, 8)}...</td>
                     </tr>
                   ))}
                 </tbody>
