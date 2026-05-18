@@ -15,16 +15,34 @@ type EmptyLeg = {
   estado: string;
 };
 
+type Avion = {
+  id: number;
+  matricula: string;
+  modelo: string;
+  tipo: string;
+  pasajeros: number;
+  wc: boolean;
+  cabina: string;
+  horas_max: string;
+  maletas: number;
+  sobrecargo: boolean;
+  foto_url: string;
+  estado: string;
+};
+
 export default function AdminPage() {
+  const [tab, setTab] = useState('empty-legs');
   const [vuelos, setVuelos] = useState<EmptyLeg[]>([]);
+  const [flota, setFlota] = useState<Avion[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({
-    origen: '', destino: '', fecha: '', hora: '',
-    precio_asiento: '', precio_cabina: '', aeronave: '', asientos: '8'
-  });
+  const [vueloForm, setVueloForm] = useState({ origen: '', destino: '', fecha: '', hora: '', precio_asiento: '', precio_cabina: '', aeronave: '', asientos: '8' });
+  const [avionForm, setAvionForm] = useState({ matricula: '', modelo: '', tipo: 'Mid-Size Jet', pasajeros: '8', wc: true, cabina: 'Alta', horas_max: '5h', maletas: '8', sobrecargo: false, foto_url: '', estado: 'disponible' });
 
-  useEffect(() => { fetchVuelos(); }, []);
+  useEffect(() => {
+    fetchVuelos();
+    fetchFlota();
+  }, []);
 
   const fetchVuelos = async () => {
     const { data } = await supabase.from('empty_legs').select('*').order('fecha', { ascending: true });
@@ -32,30 +50,46 @@ export default function AdminPage() {
     setLoading(false);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const fetchFlota = async () => {
+    const { data } = await supabase.from('flota').select('*').order('modelo', { ascending: true });
+    if (data) setFlota(data);
+  };
+
+  const handleVueloSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await supabase.from('empty_legs').insert([{
-      ...form,
-      precio_asiento: parseInt(form.precio_asiento),
-      precio_cabina: parseInt(form.precio_cabina),
-      asientos: parseInt(form.asientos),
-      estado: 'disponible'
-    }]);
-    setForm({ origen: '', destino: '', fecha: '', hora: '', precio_asiento: '', precio_cabina: '', aeronave: '', asientos: '8' });
+    await supabase.from('empty_legs').insert([{ ...vueloForm, precio_asiento: parseInt(vueloForm.precio_asiento), precio_cabina: parseInt(vueloForm.precio_cabina), asientos: parseInt(vueloForm.asientos), estado: 'disponible' }]);
+    setVueloForm({ origen: '', destino: '', fecha: '', hora: '', precio_asiento: '', precio_cabina: '', aeronave: '', asientos: '8' });
     setShowForm(false);
     fetchVuelos();
   };
 
-  const handleDelete = async (id: number) => {
+  const handleAvionSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await supabase.from('flota').insert([{ ...avionForm, pasajeros: parseInt(avionForm.pasajeros), maletas: parseInt(avionForm.maletas) }]);
+    setAvionForm({ matricula: '', modelo: '', tipo: 'Mid-Size Jet', pasajeros: '8', wc: true, cabina: 'Alta', horas_max: '5h', maletas: '8', sobrecargo: false, foto_url: '', estado: 'disponible' });
+    setShowForm(false);
+    fetchFlota();
+  };
+
+  const handleDeleteVuelo = async (id: number) => {
     if (!confirm('¿Eliminar este vuelo?')) return;
     await supabase.from('empty_legs').delete().eq('id', id);
     fetchVuelos();
   };
 
-  const handleEstado = async (id: number, estado: string) => {
+  const handleDeleteAvion = async (id: number) => {
+    if (!confirm('¿Eliminar esta aeronave?')) return;
+    await supabase.from('flota').delete().eq('id', id);
+    fetchFlota();
+  };
+
+  const handleEstadoVuelo = async (id: number, estado: string) => {
     await supabase.from('empty_legs').update({ estado }).eq('id', id);
     fetchVuelos();
   };
+
+  const inputStyle = { width: '100%', backgroundColor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '12px 14px', color: 'white', fontSize: 14, boxSizing: 'border-box' as const };
+  const labelStyle = { display: 'block', fontSize: 11, color: 'rgba(255,255,255,0.4)', marginBottom: 6, letterSpacing: 1 };
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#0D1B2A', color: 'white', fontFamily: 'Arial, sans-serif' }}>
@@ -66,86 +100,146 @@ export default function AdminPage() {
           <p style={{ margin: 0, fontSize: 10, color: '#C9A84C', letterSpacing: 6 }}>AVIATION ADMIN</p>
         </div>
         <button onClick={() => setShowForm(!showForm)} style={{ backgroundColor: '#C9A84C', color: '#1B2A4A', border: 'none', padding: '12px 24px', borderRadius: 8, fontWeight: 700, cursor: 'pointer', fontSize: 14 }}>
-          {showForm ? 'Cancelar' : '+ Nuevo Empty Leg'}
+          {showForm ? 'Cancelar' : tab === 'empty-legs' ? '+ Nuevo Empty Leg' : '+ Nueva Aeronave'}
         </button>
       </div>
 
+      {/* Tabs */}
+      <div style={{ display: 'flex', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingLeft: 32 }}>
+        {[{ key: 'empty-legs', label: 'Empty Legs' }, { key: 'flota', label: 'Nuestra Flota' }].map(t => (
+          <button key={t.key} onClick={() => { setTab(t.key); setShowForm(false); }} style={{ padding: '16px 24px', border: 'none', backgroundColor: 'transparent', color: tab === t.key ? '#C9A84C' : 'rgba(255,255,255,0.4)', borderBottom: tab === t.key ? '2px solid #C9A84C' : '2px solid transparent', cursor: 'pointer', fontSize: 13, fontWeight: tab === t.key ? 700 : 400, letterSpacing: 1 }}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
       <div style={{ padding: '32px' }}>
-        {/* Form */}
-        {showForm && (
-          <form onSubmit={handleSubmit} style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(201,168,76,0.2)', borderRadius: 12, padding: 24, marginBottom: 32 }}>
+        {/* Empty Legs Form */}
+        {showForm && tab === 'empty-legs' && (
+          <form onSubmit={handleVueloSubmit} style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(201,168,76,0.2)', borderRadius: 12, padding: 24, marginBottom: 32 }}>
             <h2 style={{ margin: '0 0 20px', fontSize: 18, color: '#C9A84C' }}>Nuevo Empty Leg</h2>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-              {[
-                { label: 'Origen', key: 'origen', placeholder: 'Ej: Toluca' },
-                { label: 'Destino', key: 'destino', placeholder: 'Ej: Cancún' },
-                { label: 'Fecha', key: 'fecha', placeholder: 'YYYY-MM-DD', type: 'date' },
-                { label: 'Hora', key: 'hora', placeholder: 'HH:MM', type: 'time' },
-                { label: 'Precio por asiento (USD)', key: 'precio_asiento', placeholder: '350', type: 'number' },
-                { label: 'Precio cabina completa (USD)', key: 'precio_cabina', placeholder: '2100', type: 'number' },
-                { label: 'Aeronave', key: 'aeronave', placeholder: 'Ej: Hawker 800' },
-                { label: 'Asientos disponibles', key: 'asientos', placeholder: '8', type: 'number' },
-              ].map(({ label, key, placeholder, type }) => (
+              {[{ label: 'Origen', key: 'origen', placeholder: 'Ej: Toluca' }, { label: 'Destino', key: 'destino', placeholder: 'Ej: Cancún' }, { label: 'Fecha', key: 'fecha', type: 'date' }, { label: 'Hora', key: 'hora', type: 'time' }, { label: 'Precio asiento (USD)', key: 'precio_asiento', type: 'number', placeholder: '350' }, { label: 'Precio cabina (USD)', key: 'precio_cabina', type: 'number', placeholder: '2100' }, { label: 'Aeronave', key: 'aeronave', placeholder: 'Ej: Hawker 800' }, { label: 'Asientos', key: 'asientos', type: 'number', placeholder: '8' }].map(({ label, key, placeholder, type }) => (
                 <div key={key}>
-                  <label style={{ display: 'block', fontSize: 11, color: 'rgba(255,255,255,0.4)', marginBottom: 6, letterSpacing: 1 }}>{label}</label>
-                  <input
-                    type={type || 'text'}
-                    placeholder={placeholder}
-                    value={form[key as keyof typeof form]}
-                    onChange={e => setForm({ ...form, [key]: e.target.value })}
-                    required
-                    style={{ width: '100%', backgroundColor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '12px 14px', color: 'white', fontSize: 14, boxSizing: 'border-box' }}
-                  />
+                  <label style={labelStyle}>{label}</label>
+                  <input type={type || 'text'} placeholder={placeholder} value={vueloForm[key as keyof typeof vueloForm] as string} onChange={e => setVueloForm({ ...vueloForm, [key]: e.target.value })} required style={inputStyle} />
                 </div>
               ))}
             </div>
-            <button type="submit" style={{ marginTop: 20, backgroundColor: '#C9A84C', color: '#1B2A4A', border: 'none', padding: '14px 32px', borderRadius: 8, fontWeight: 700, cursor: 'pointer', fontSize: 15 }}>
-              Publicar vuelo
-            </button>
+            <button type="submit" style={{ marginTop: 20, backgroundColor: '#C9A84C', color: '#1B2A4A', border: 'none', padding: '14px 32px', borderRadius: 8, fontWeight: 700, cursor: 'pointer', fontSize: 15 }}>Publicar vuelo</button>
           </form>
         )}
 
-        {/* Table */}
-        <h2 style={{ fontSize: 18, color: 'rgba(255,255,255,0.5)', marginBottom: 16, fontWeight: 300 }}>Empty Legs ({vuelos.length})</h2>
-        {loading ? (
-          <p style={{ color: 'rgba(255,255,255,0.3)' }}>Cargando...</p>
-        ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid rgba(201,168,76,0.2)' }}>
-                  {['Ruta', 'Fecha', 'Hora', 'Aeronave', 'Pax', 'Asiento', 'Cabina', 'Estado', 'Acciones'].map(h => (
-                    <th key={h} style={{ textAlign: 'left', padding: '12px 16px', fontSize: 10, color: '#C9A84C', letterSpacing: 2, fontWeight: 600 }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {vuelos.map(v => (
-                  <tr key={v.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                    <td style={{ padding: '14px 16px', fontWeight: 500 }}>{v.origen} → {v.destino}</td>
-                    <td style={{ padding: '14px 16px', color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>{v.fecha}</td>
-                    <td style={{ padding: '14px 16px', color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>{v.hora}</td>
-                    <td style={{ padding: '14px 16px', color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>{v.aeronave}</td>
-                    <td style={{ padding: '14px 16px', color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>{v.asientos}</td>
-                    <td style={{ padding: '14px 16px', color: '#C9A84C', fontSize: 13 }}>${v.precio_asiento} USD</td>
-                    <td style={{ padding: '14px 16px', color: '#C9A84C', fontSize: 13 }}>${v.precio_cabina} USD</td>
-                    <td style={{ padding: '14px 16px' }}>
-                      <select value={v.estado} onChange={e => handleEstado(v.id, e.target.value)} style={{ backgroundColor: '#1B2A4A', color: v.estado === 'disponible' ? '#4CAF50' : '#f44336', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6, padding: '4px 8px', fontSize: 12, cursor: 'pointer' }}>
-                        <option value="disponible">Disponible</option>
-                        <option value="agotado">Agotado</option>
-                        <option value="cancelado">Cancelado</option>
-                      </select>
-                    </td>
-                    <td style={{ padding: '14px 16px' }}>
-                      <button onClick={() => handleDelete(v.id)} style={{ backgroundColor: 'rgba(244,67,54,0.1)', color: '#f44336', border: '1px solid rgba(244,67,54,0.3)', borderRadius: 6, padding: '6px 12px', cursor: 'pointer', fontSize: 12 }}>
-                        Eliminar
-                      </button>
-                    </td>
+        {/* Flota Form */}
+        {showForm && tab === 'flota' && (
+          <form onSubmit={handleAvionSubmit} style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(201,168,76,0.2)', borderRadius: 12, padding: 24, marginBottom: 32 }}>
+            <h2 style={{ margin: '0 0 20px', fontSize: 18, color: '#C9A84C' }}>Nueva Aeronave</h2>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              {[{ label: 'Matrícula', key: 'matricula', placeholder: 'XB-PAT' }, { label: 'Modelo', key: 'modelo', placeholder: 'Learjet 35' }, { label: 'Horas máx. vuelo', key: 'horas_max', placeholder: '5h' }, { label: 'Pasajeros', key: 'pasajeros', type: 'number', placeholder: '8' }, { label: 'Maletas', key: 'maletas', type: 'number', placeholder: '8' }, { label: 'URL Foto', key: 'foto_url', placeholder: 'https://...' }].map(({ label, key, placeholder, type }) => (
+                <div key={key}>
+                  <label style={labelStyle}>{label}</label>
+                  <input type={type || 'text'} placeholder={placeholder} value={avionForm[key as keyof typeof avionForm] as string} onChange={e => setAvionForm({ ...avionForm, [key]: e.target.value })} style={inputStyle} />
+                </div>
+              ))}
+              <div>
+                <label style={labelStyle}>Tipo</label>
+                <select value={avionForm.tipo} onChange={e => setAvionForm({ ...avionForm, tipo: e.target.value })} style={inputStyle}>
+                  {['Light Jet', 'Mid-Size Jet', 'Heavy Jet'].map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={labelStyle}>Cabina</label>
+                <select value={avionForm.cabina} onChange={e => setAvionForm({ ...avionForm, cabina: e.target.value })} style={inputStyle}>
+                  {['Alta', 'Baja'].map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <input type="checkbox" checked={avionForm.wc} onChange={e => setAvionForm({ ...avionForm, wc: e.target.checked })} />
+                <label style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14 }}>WC a bordo</label>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <input type="checkbox" checked={avionForm.sobrecargo} onChange={e => setAvionForm({ ...avionForm, sobrecargo: e.target.checked })} />
+                <label style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14 }}>Sobrecargo disponible</label>
+              </div>
+            </div>
+            <button type="submit" style={{ marginTop: 20, backgroundColor: '#C9A84C', color: '#1B2A4A', border: 'none', padding: '14px 32px', borderRadius: 8, fontWeight: 700, cursor: 'pointer', fontSize: 15 }}>Agregar aeronave</button>
+          </form>
+        )}
+
+        {/* Empty Legs Table */}
+        {tab === 'empty-legs' && (
+          <>
+            <h2 style={{ fontSize: 18, color: 'rgba(255,255,255,0.5)', marginBottom: 16, fontWeight: 300 }}>Empty Legs ({vuelos.length})</h2>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid rgba(201,168,76,0.2)' }}>
+                    {['Ruta', 'Fecha', 'Hora', 'Aeronave', 'Pax', 'Asiento', 'Cabina', 'Estado', 'Acciones'].map(h => (
+                      <th key={h} style={{ textAlign: 'left', padding: '12px 16px', fontSize: 10, color: '#C9A84C', letterSpacing: 2 }}>{h}</th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {vuelos.map(v => (
+                    <tr key={v.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                      <td style={{ padding: '14px 16px', fontWeight: 500 }}>{v.origen} → {v.destino}</td>
+                      <td style={{ padding: '14px 16px', color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>{v.fecha}</td>
+                      <td style={{ padding: '14px 16px', color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>{v.hora}</td>
+                      <td style={{ padding: '14px 16px', color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>{v.aeronave}</td>
+                      <td style={{ padding: '14px 16px', color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>{v.asientos}</td>
+                      <td style={{ padding: '14px 16px', color: '#C9A84C', fontSize: 13 }}>${v.precio_asiento} USD</td>
+                      <td style={{ padding: '14px 16px', color: '#C9A84C', fontSize: 13 }}>${v.precio_cabina} USD</td>
+                      <td style={{ padding: '14px 16px' }}>
+                        <select value={v.estado} onChange={e => handleEstadoVuelo(v.id, e.target.value)} style={{ backgroundColor: '#1B2A4A', color: v.estado === 'disponible' ? '#4CAF50' : '#f44336', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6, padding: '4px 8px', fontSize: 12, cursor: 'pointer' }}>
+                          <option value="disponible">Disponible</option>
+                          <option value="agotado">Agotado</option>
+                          <option value="cancelado">Cancelado</option>
+                        </select>
+                      </td>
+                      <td style={{ padding: '14px 16px' }}>
+                        <button onClick={() => handleDeleteVuelo(v.id)} style={{ backgroundColor: 'rgba(244,67,54,0.1)', color: '#f44336', border: '1px solid rgba(244,67,54,0.3)', borderRadius: 6, padding: '6px 12px', cursor: 'pointer', fontSize: 12 }}>Eliminar</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+
+        {/* Flota Table */}
+        {tab === 'flota' && (
+          <>
+            <h2 style={{ fontSize: 18, color: 'rgba(255,255,255,0.5)', marginBottom: 16, fontWeight: 300 }}>Flota ({flota.length})</h2>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid rgba(201,168,76,0.2)' }}>
+                    {['Matrícula', 'Modelo', 'Tipo', 'Pax', 'WC', 'Cabina', 'Horas', 'Maletas', 'Acciones'].map(h => (
+                      <th key={h} style={{ textAlign: 'left', padding: '12px 16px', fontSize: 10, color: '#C9A84C', letterSpacing: 2 }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {flota.map(a => (
+                    <tr key={a.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                      <td style={{ padding: '14px 16px', color: '#C9A84C', fontWeight: 600 }}>{a.matricula}</td>
+                      <td style={{ padding: '14px 16px', fontWeight: 500 }}>{a.modelo}</td>
+                      <td style={{ padding: '14px 16px', color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>{a.tipo}</td>
+                      <td style={{ padding: '14px 16px', color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>{a.pasajeros}</td>
+                      <td style={{ padding: '14px 16px', fontSize: 13 }}>{a.wc ? '✓' : '✗'}</td>
+                      <td style={{ padding: '14px 16px', color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>{a.cabina}</td>
+                      <td style={{ padding: '14px 16px', color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>{a.horas_max}</td>
+                      <td style={{ padding: '14px 16px', color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>{a.maletas}</td>
+                      <td style={{ padding: '14px 16px' }}>
+                        <button onClick={() => handleDeleteAvion(a.id)} style={{ backgroundColor: 'rgba(244,67,54,0.1)', color: '#f44336', border: '1px solid rgba(244,67,54,0.3)', borderRadius: 6, padding: '6px 12px', cursor: 'pointer', fontSize: 12 }}>Eliminar</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
     </div>
