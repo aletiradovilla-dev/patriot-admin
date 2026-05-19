@@ -49,8 +49,12 @@ export default function AdminPage() {
   const [viajes, setViajes] = useState<Viaje[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [vueloForm, setVueloForm] = useState({ origen: '', destino: '', fecha: '', hora: '', precio_asiento: '', precio_cabina: '', aeronave: '', asientos: '8' });
-  const [avionForm, setAvionForm] = useState({ matricula: '', modelo: '', tipo: 'Mid-Size Jet', pasajeros: '8', wc: true, cabina: 'Alta', horas_max: '5h', maletas: '8', sobrecargo: false, foto_url: '', estado: 'disponible' });
+  const [vueloForm, setVueloForm] = useState({
+    origen: '', destino: '', fecha: '', hora: '', precio_asiento: '', precio_cabina: '', aeronave: '', asientos: '8'
+  });
+  const [avionForm, setAvionForm] = useState({
+    matricula: '', modelo: '', tipo: 'Mid-Size Jet', pasajeros: '8', wc: true, cabina: 'Alta', horas_max: '5h', maletas: '8', sobrecargo: false, foto_url: '', estado: 'disponible'
+  });
 
   useEffect(() => {
     fetchVuelos();
@@ -76,7 +80,13 @@ export default function AdminPage() {
 
   const handleVueloSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await supabase.from('empty_legs').insert([{ ...vueloForm, precio_asiento: parseInt(vueloForm.precio_asiento), precio_cabina: parseInt(vueloForm.precio_cabina), asientos: parseInt(vueloForm.asientos), estado: 'disponible' }]);
+    await supabase.from('empty_legs').insert([{
+      ...vueloForm,
+      precio_asiento: parseInt(vueloForm.precio_asiento),
+      precio_cabina: parseInt(vueloForm.precio_cabina),
+      asientos: parseInt(vueloForm.asientos),
+      estado: 'disponible'
+    }]);
     setVueloForm({ origen: '', destino: '', fecha: '', hora: '', precio_asiento: '', precio_cabina: '', aeronave: '', asientos: '8' });
     setShowForm(false);
     fetchVuelos();
@@ -84,7 +94,11 @@ export default function AdminPage() {
 
   const handleAvionSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await supabase.from('flota').insert([{ ...avionForm, pasajeros: parseInt(avionForm.pasajeros), maletas: parseInt(avionForm.maletas) }]);
+    await supabase.from('flota').insert([{
+      ...avionForm,
+      pasajeros: parseInt(avionForm.pasajeros),
+      maletas: parseInt(avionForm.maletas)
+    }]);
     setAvionForm({ matricula: '', modelo: '', tipo: 'Mid-Size Jet', pasajeros: '8', wc: true, cabina: 'Alta', horas_max: '5h', maletas: '8', sobrecargo: false, foto_url: '', estado: 'disponible' });
     setShowForm(false);
     fetchFlota();
@@ -112,18 +126,25 @@ export default function AdminPage() {
     fetchViajes();
   };
 
-  const inputStyle = { width: '100%', backgroundColor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '12px 14px', color: 'white', fontSize: 14, boxSizing: 'border-box' as const };
-  const labelStyle = { display: 'block', fontSize: 11, color: 'rgba(255,255,255,0.4)', marginBottom: 6, letterSpacing: 1 };
+  const inputStyle = {
+    width: '100%', backgroundColor: 'rgba(255,255,255,0.06)',
+    border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8,
+    padding: '12px 14px', color: 'white', fontSize: 14,
+    boxSizing: 'border-box' as const
+  };
+  const labelStyle = {
+    display: 'block', fontSize: 11, color: 'rgba(255,255,255,0.4)',
+    marginBottom: 6, letterSpacing: 1
+  };
 
   const estadoColor: Record<string, string> = {
-    confirmado: '#4CAF50',
-    en_proceso: '#C9A84C',
-    completado: '#666',
-    cancelado: '#f44336',
+    confirmado: '#4CAF50', en_proceso: '#C9A84C', completado: '#666', cancelado: '#f44336',
   };
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#0D1B2A', color: 'white', fontFamily: 'Arial, sans-serif' }}>
+
+      {/* HEADER */}
       <div style={{ backgroundColor: '#1B2A4A', padding: '20px 32px', borderBottom: '1px solid rgba(201,168,76,0.2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h1 style={{ margin: 0, fontSize: 24, fontWeight: 300, letterSpacing: 4 }}>PATRIOT</h1>
@@ -136,6 +157,7 @@ export default function AdminPage() {
         )}
       </div>
 
+      {/* TABS */}
       <div style={{ display: 'flex', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingLeft: 32 }}>
         {[{ key: 'empty-legs', label: 'Empty Legs' }, { key: 'flota', label: 'Nuestra Flota' }, { key: 'viajes', label: 'Viajes' }].map(t => (
           <button key={t.key} onClick={() => { setTab(t.key); setShowForm(false); }} style={{ padding: '16px 24px', border: 'none', backgroundColor: 'transparent', color: tab === t.key ? '#C9A84C' : 'rgba(255,255,255,0.4)', borderBottom: tab === t.key ? '2px solid #C9A84C' : '2px solid transparent', cursor: 'pointer', fontSize: 13, fontWeight: tab === t.key ? 700 : 400, letterSpacing: 1 }}>
@@ -145,26 +167,64 @@ export default function AdminPage() {
       </div>
 
       <div style={{ padding: '32px' }}>
+
+        {/* FORM EMPTY LEG */}
         {showForm && tab === 'empty-legs' && (
           <form onSubmit={handleVueloSubmit} style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(201,168,76,0.2)', borderRadius: 12, padding: 24, marginBottom: 32 }}>
             <h2 style={{ margin: '0 0 20px', fontSize: 18, color: '#C9A84C' }}>Nuevo Empty Leg</h2>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-              {[{ label: 'Origen', key: 'origen', placeholder: 'Ej: Toluca' }, { label: 'Destino', key: 'destino', placeholder: 'Ej: Cancún' }, { label: 'Fecha', key: 'fecha', type: 'date' }, { label: 'Hora', key: 'hora', type: 'time' }, { label: 'Precio asiento (USD)', key: 'precio_asiento', type: 'number', placeholder: '350' }, { label: 'Precio cabina (USD)', key: 'precio_cabina', type: 'number', placeholder: '2100' }, { label: 'Aeronave', key: 'aeronave', placeholder: 'Ej: Hawker 800' }, { label: 'Asientos', key: 'asientos', type: 'number', placeholder: '8' }].map(({ label, key, placeholder, type }) => (
-                <div key={key}>
-                  <label style={labelStyle}>{label}</label>
-                  <input type={type || 'text'} placeholder={placeholder} value={vueloForm[key as keyof typeof vueloForm] as string} onChange={e => setVueloForm({ ...vueloForm, [key]: e.target.value })} required style={inputStyle} />
-                </div>
-              ))}
+              <div>
+                <label style={labelStyle}>Origen</label>
+                <input type="text" placeholder="Ej: Toluca" value={vueloForm.origen} onChange={e => setVueloForm({ ...vueloForm, origen: e.target.value })} required style={inputStyle} />
+              </div>
+              <div>
+                <label style={labelStyle}>Destino</label>
+                <input type="text" placeholder="Ej: Cancún" value={vueloForm.destino} onChange={e => setVueloForm({ ...vueloForm, destino: e.target.value })} required style={inputStyle} />
+              </div>
+              <div>
+                <label style={labelStyle}>Fecha</label>
+                <input type="date" value={vueloForm.fecha} onChange={e => setVueloForm({ ...vueloForm, fecha: e.target.value })} required style={inputStyle} />
+              </div>
+              <div>
+                <label style={labelStyle}>Hora (formato 07:00 o TBA)</label>
+                <input type="text" placeholder="07:00 o TBA" value={vueloForm.hora} onChange={e => setVueloForm({ ...vueloForm, hora: e.target.value })} required style={inputStyle} />
+              </div>
+              <div>
+                <label style={labelStyle}>Precio asiento (USD)</label>
+                <input type="number" placeholder="350" value={vueloForm.precio_asiento} onChange={e => setVueloForm({ ...vueloForm, precio_asiento: e.target.value })} required style={inputStyle} />
+              </div>
+              <div>
+                <label style={labelStyle}>Precio cabina (USD)</label>
+                <input type="number" placeholder="2100" value={vueloForm.precio_cabina} onChange={e => setVueloForm({ ...vueloForm, precio_cabina: e.target.value })} required style={inputStyle} />
+              </div>
+              <div>
+                <label style={labelStyle}>Aeronave</label>
+                <input type="text" placeholder="Ej: Hawker 800" value={vueloForm.aeronave} onChange={e => setVueloForm({ ...vueloForm, aeronave: e.target.value })} required style={inputStyle} />
+              </div>
+              <div>
+                <label style={labelStyle}>Asientos disponibles</label>
+                <input type="number" placeholder="8" value={vueloForm.asientos} onChange={e => setVueloForm({ ...vueloForm, asientos: e.target.value })} required style={inputStyle} />
+              </div>
             </div>
-            <button type="submit" style={{ marginTop: 20, backgroundColor: '#C9A84C', color: '#1B2A4A', border: 'none', padding: '14px 32px', borderRadius: 8, fontWeight: 700, cursor: 'pointer', fontSize: 15 }}>Publicar vuelo</button>
+            <button type="submit" style={{ marginTop: 20, backgroundColor: '#C9A84C', color: '#1B2A4A', border: 'none', padding: '14px 32px', borderRadius: 8, fontWeight: 700, cursor: 'pointer', fontSize: 15 }}>
+              Publicar vuelo
+            </button>
           </form>
         )}
 
+        {/* FORM FLOTA */}
         {showForm && tab === 'flota' && (
           <form onSubmit={handleAvionSubmit} style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(201,168,76,0.2)', borderRadius: 12, padding: 24, marginBottom: 32 }}>
             <h2 style={{ margin: '0 0 20px', fontSize: 18, color: '#C9A84C' }}>Nueva Aeronave</h2>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-              {[{ label: 'Matrícula', key: 'matricula', placeholder: 'XB-PAT' }, { label: 'Modelo', key: 'modelo', placeholder: 'Learjet 35' }, { label: 'Horas máx. vuelo', key: 'horas_max', placeholder: '5h' }, { label: 'Pasajeros', key: 'pasajeros', type: 'number', placeholder: '8' }, { label: 'Maletas', key: 'maletas', type: 'number', placeholder: '8' }, { label: 'URL Foto', key: 'foto_url', placeholder: 'https://...' }].map(({ label, key, placeholder, type }) => (
+              {[
+                { label: 'Matrícula', key: 'matricula', placeholder: 'XB-PAT' },
+                { label: 'Modelo', key: 'modelo', placeholder: 'Learjet 35' },
+                { label: 'Horas máx. vuelo', key: 'horas_max', placeholder: '5h' },
+                { label: 'Pasajeros', key: 'pasajeros', type: 'number', placeholder: '8' },
+                { label: 'Maletas', key: 'maletas', type: 'number', placeholder: '8' },
+                { label: 'URL Foto', key: 'foto_url', placeholder: 'https://...' },
+              ].map(({ label, key, placeholder, type }) => (
                 <div key={key}>
                   <label style={labelStyle}>{label}</label>
                   <input type={type || 'text'} placeholder={placeholder} value={avionForm[key as keyof typeof avionForm] as string} onChange={e => setAvionForm({ ...avionForm, [key]: e.target.value })} style={inputStyle} />
@@ -191,10 +251,13 @@ export default function AdminPage() {
                 <label style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14 }}>Sobrecargo disponible</label>
               </div>
             </div>
-            <button type="submit" style={{ marginTop: 20, backgroundColor: '#C9A84C', color: '#1B2A4A', border: 'none', padding: '14px 32px', borderRadius: 8, fontWeight: 700, cursor: 'pointer', fontSize: 15 }}>Agregar aeronave</button>
+            <button type="submit" style={{ marginTop: 20, backgroundColor: '#C9A84C', color: '#1B2A4A', border: 'none', padding: '14px 32px', borderRadius: 8, fontWeight: 700, cursor: 'pointer', fontSize: 15 }}>
+              Agregar aeronave
+            </button>
           </form>
         )}
 
+        {/* TABLA EMPTY LEGS */}
         {tab === 'empty-legs' && (
           <>
             <h2 style={{ fontSize: 18, color: 'rgba(255,255,255,0.5)', marginBottom: 16, fontWeight: 300 }}>Empty Legs ({vuelos.length})</h2>
@@ -235,6 +298,7 @@ export default function AdminPage() {
           </>
         )}
 
+        {/* TABLA FLOTA */}
         {tab === 'flota' && (
           <>
             <h2 style={{ fontSize: 18, color: 'rgba(255,255,255,0.5)', marginBottom: 16, fontWeight: 300 }}>Flota ({flota.length})</h2>
@@ -269,6 +333,7 @@ export default function AdminPage() {
           </>
         )}
 
+        {/* TABLA VIAJES */}
         {tab === 'viajes' && (
           <>
             <h2 style={{ fontSize: 18, color: 'rgba(255,255,255,0.5)', marginBottom: 16, fontWeight: 300 }}>Viajes ({viajes.length})</h2>
@@ -276,7 +341,7 @@ export default function AdminPage() {
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid rgba(201,168,76,0.2)' }}>
-                    {['Ruta', 'Fecha', 'Tipo', 'Aeronave', 'Precio', 'Estado', 'Acciones'].map(h => (
+                    {['Ruta', 'Fecha', 'Tipo', 'Aeronave', 'Precio', 'Estado', 'Usuario'].map(h => (
                       <th key={h} style={{ textAlign: 'left', padding: '12px 16px', fontSize: 10, color: '#C9A84C', letterSpacing: 2 }}>{h}</th>
                     ))}
                   </tr>
@@ -299,7 +364,7 @@ export default function AdminPage() {
                           <option value="cancelado">Cancelado</option>
                         </select>
                       </td>
-                      <td style={{ padding: '14px 16px', fontSize: 13, color: 'rgba(255,255,255,0.3)', fontSize: 11 }}>{v.usuario_id?.slice(0, 8)}...</td>
+                      <td style={{ padding: '14px 16px', fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>{v.usuario_id?.slice(0, 8)}...</td>
                     </tr>
                   ))}
                 </tbody>
@@ -307,6 +372,7 @@ export default function AdminPage() {
             </div>
           </>
         )}
+
       </div>
     </div>
   );
