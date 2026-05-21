@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { supabase } from './supabase';
+import { supabase, supabaseAdmin } from './supabase';
 
 type EmptyLeg = {
   id: number;
@@ -91,8 +92,9 @@ export default function AdminPage() {
   };
 
   const fetchPerfiles = async () => {
-    const { data } = await supabase.from('perfiles').select('*');
-    if (data) setPerfiles(data);
+  const { data } = await supabaseAdmin.from('perfiles').select('*');
+  if (data) setPerfiles(data);
+};
   };
 
   const handleVueloSubmit = async (e: React.FormEvent) => {
