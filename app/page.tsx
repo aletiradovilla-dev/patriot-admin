@@ -42,11 +42,19 @@ type Viaje = {
   precio: number;
 };
 
+type Perfil = {
+  id: string;
+  nombre: string;
+  telefono: string;
+  empresa: string;
+};
+
 export default function AdminPage() {
   const [tab, setTab] = useState('empty-legs');
   const [vuelos, setVuelos] = useState<EmptyLeg[]>([]);
   const [flota, setFlota] = useState<Avion[]>([]);
   const [viajes, setViajes] = useState<Viaje[]>([]);
+  const [perfiles, setPerfiles] = useState<Perfil[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [vueloForm, setVueloForm] = useState({
@@ -55,11 +63,15 @@ export default function AdminPage() {
   const [avionForm, setAvionForm] = useState({
     matricula: '', modelo: '', tipo: 'Mid-Size Jet', pasajeros: '8', wc: true, cabina: 'Alta', horas_max: '5h', maletas: '8', sobrecargo: false, foto_url: '', estado: 'disponible'
   });
+  const [viajeForm, setViajeForm] = useState({
+    usuario_id: '', origen: '', destino: '', fecha: '', tipo: 'Charter', aeronave: '', precio: '', estado: 'en_proceso'
+  });
 
   useEffect(() => {
     fetchVuelos();
     fetchFlota();
     fetchViajes();
+    fetchPerfiles();
   }, []);
 
   const fetchVuelos = async () => {
@@ -76,6 +88,11 @@ export default function AdminPage() {
   const fetchViajes = async () => {
     const { data } = await supabase.from('viajes').select('*').order('fecha', { ascending: false });
     if (data) setViajes(data);
+  };
+
+  const fetchPerfiles = async () => {
+    const { data } = await supabase.from('perfiles').select('*');
+    if (data) setPerfiles(data);
   };
 
   const handleVueloSubmit = async (e: React.FormEvent) => {
@@ -104,6 +121,20 @@ export default function AdminPage() {
     fetchFlota();
   };
 
+  const handleViajeSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const { error } = await supabase.from('viajes').insert([{
+      ...viajeForm,
+      precio: parseInt(viajeForm.precio) || 0,
+    }]);
+    if (error) alert('Error: ' + error.message);
+    else {
+      setViajeForm({ usuario_id: '', origen: '', destino: '', fecha: '', tipo: 'Charter', aeronave: '', precio: '', estado: 'en_proceso' });
+      setShowForm(false);
+      fetchViajes();
+    }
+  };
+
   const handleDeleteVuelo = async (id: number) => {
     if (!confirm('¿Eliminar este vuelo?')) return;
     await supabase.from('empty_legs').delete().eq('id', id);
@@ -114,6 +145,12 @@ export default function AdminPage() {
     if (!confirm('¿Eliminar esta aeronave?')) return;
     await supabase.from('flota').delete().eq('id', id);
     fetchFlota();
+  };
+
+  const handleDeleteViaje = async (id: number) => {
+    if (!confirm('¿Eliminar este viaje?')) return;
+    await supabase.from('viajes').delete().eq('id', id);
+    fetchViajes();
   };
 
   const handleEstadoVuelo = async (id: number, estado: string) => {
@@ -141,6 +178,11 @@ export default function AdminPage() {
     confirmado: '#4CAF50', en_proceso: '#C9A84C', completado: '#666', cancelado: '#f44336',
   };
 
+  const getNombrePerfil = (id: string) => {
+    const perfil = perfiles.find(p => p.id === id);
+    return perfil?.nombre || id?.slice(0, 8) + '...';
+  };
+
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#0D1B2A', color: 'white', fontFamily: 'Arial, sans-serif' }}>
 
@@ -150,11 +192,9 @@ export default function AdminPage() {
           <h1 style={{ margin: 0, fontSize: 24, fontWeight: 300, letterSpacing: 4 }}>PATRIOT</h1>
           <p style={{ margin: 0, fontSize: 10, color: '#C9A84C', letterSpacing: 6 }}>AVIATION ADMIN</p>
         </div>
-        {tab !== 'viajes' && (
-          <button onClick={() => setShowForm(!showForm)} style={{ backgroundColor: '#C9A84C', color: '#1B2A4A', border: 'none', padding: '12px 24px', borderRadius: 8, fontWeight: 700, cursor: 'pointer', fontSize: 14 }}>
-            {showForm ? 'Cancelar' : tab === 'empty-legs' ? '+ Nuevo Empty Leg' : '+ Nueva Aeronave'}
-          </button>
-        )}
+        <button onClick={() => setShowForm(!showForm)} style={{ backgroundColor: '#C9A84C', color: '#1B2A4A', border: 'none', padding: '12px 24px', borderRadius: 8, fontWeight: 700, cursor: 'pointer', fontSize: 14 }}>
+          {showForm ? 'Cancelar' : tab === 'empty-legs' ? '+ Nuevo Empty Leg' : tab === 'flota' ? '+ Nueva Aeronave' : '+ Nuevo Viaje'}
+        </button>
       </div>
 
       {/* TABS */}
@@ -173,42 +213,16 @@ export default function AdminPage() {
           <form onSubmit={handleVueloSubmit} style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(201,168,76,0.2)', borderRadius: 12, padding: 24, marginBottom: 32 }}>
             <h2 style={{ margin: '0 0 20px', fontSize: 18, color: '#C9A84C' }}>Nuevo Empty Leg</h2>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-              <div>
-                <label style={labelStyle}>Origen</label>
-                <input type="text" placeholder="Ej: Toluca" value={vueloForm.origen} onChange={e => setVueloForm({ ...vueloForm, origen: e.target.value })} required style={inputStyle} />
-              </div>
-              <div>
-                <label style={labelStyle}>Destino</label>
-                <input type="text" placeholder="Ej: Cancún" value={vueloForm.destino} onChange={e => setVueloForm({ ...vueloForm, destino: e.target.value })} required style={inputStyle} />
-              </div>
-              <div>
-                <label style={labelStyle}>Fecha</label>
-                <input type="date" value={vueloForm.fecha} onChange={e => setVueloForm({ ...vueloForm, fecha: e.target.value })} required style={inputStyle} />
-              </div>
-              <div>
-                <label style={labelStyle}>Hora (formato 07:00 o TBA)</label>
-                <input type="text" placeholder="07:00 o TBA" value={vueloForm.hora} onChange={e => setVueloForm({ ...vueloForm, hora: e.target.value })} required style={inputStyle} />
-              </div>
-              <div>
-                <label style={labelStyle}>Precio asiento (USD)</label>
-                <input type="number" placeholder="350" value={vueloForm.precio_asiento} onChange={e => setVueloForm({ ...vueloForm, precio_asiento: e.target.value })} required style={inputStyle} />
-              </div>
-              <div>
-                <label style={labelStyle}>Precio cabina (USD)</label>
-                <input type="number" placeholder="2100" value={vueloForm.precio_cabina} onChange={e => setVueloForm({ ...vueloForm, precio_cabina: e.target.value })} required style={inputStyle} />
-              </div>
-              <div>
-                <label style={labelStyle}>Aeronave</label>
-                <input type="text" placeholder="Ej: Hawker 800" value={vueloForm.aeronave} onChange={e => setVueloForm({ ...vueloForm, aeronave: e.target.value })} required style={inputStyle} />
-              </div>
-              <div>
-                <label style={labelStyle}>Asientos disponibles</label>
-                <input type="number" placeholder="8" value={vueloForm.asientos} onChange={e => setVueloForm({ ...vueloForm, asientos: e.target.value })} required style={inputStyle} />
-              </div>
+              <div><label style={labelStyle}>Origen</label><input type="text" placeholder="Ej: Toluca" value={vueloForm.origen} onChange={e => setVueloForm({ ...vueloForm, origen: e.target.value })} required style={inputStyle} /></div>
+              <div><label style={labelStyle}>Destino</label><input type="text" placeholder="Ej: Cancún" value={vueloForm.destino} onChange={e => setVueloForm({ ...vueloForm, destino: e.target.value })} required style={inputStyle} /></div>
+              <div><label style={labelStyle}>Fecha</label><input type="date" value={vueloForm.fecha} onChange={e => setVueloForm({ ...vueloForm, fecha: e.target.value })} required style={inputStyle} /></div>
+              <div><label style={labelStyle}>Hora (07:00 o TBA)</label><input type="text" placeholder="07:00 o TBA" value={vueloForm.hora} onChange={e => setVueloForm({ ...vueloForm, hora: e.target.value })} required style={inputStyle} /></div>
+              <div><label style={labelStyle}>Precio asiento (USD)</label><input type="number" placeholder="350" value={vueloForm.precio_asiento} onChange={e => setVueloForm({ ...vueloForm, precio_asiento: e.target.value })} required style={inputStyle} /></div>
+              <div><label style={labelStyle}>Precio cabina (USD)</label><input type="number" placeholder="2100" value={vueloForm.precio_cabina} onChange={e => setVueloForm({ ...vueloForm, precio_cabina: e.target.value })} required style={inputStyle} /></div>
+              <div><label style={labelStyle}>Aeronave</label><input type="text" placeholder="Ej: Hawker 800" value={vueloForm.aeronave} onChange={e => setVueloForm({ ...vueloForm, aeronave: e.target.value })} required style={inputStyle} /></div>
+              <div><label style={labelStyle}>Asientos disponibles</label><input type="number" placeholder="8" value={vueloForm.asientos} onChange={e => setVueloForm({ ...vueloForm, asientos: e.target.value })} required style={inputStyle} /></div>
             </div>
-            <button type="submit" style={{ marginTop: 20, backgroundColor: '#C9A84C', color: '#1B2A4A', border: 'none', padding: '14px 32px', borderRadius: 8, fontWeight: 700, cursor: 'pointer', fontSize: 15 }}>
-              Publicar vuelo
-            </button>
+            <button type="submit" style={{ marginTop: 20, backgroundColor: '#C9A84C', color: '#1B2A4A', border: 'none', padding: '14px 32px', borderRadius: 8, fontWeight: 700, cursor: 'pointer', fontSize: 15 }}>Publicar vuelo</button>
           </form>
         )}
 
@@ -225,35 +239,40 @@ export default function AdminPage() {
                 { label: 'Maletas', key: 'maletas', type: 'number', placeholder: '8' },
                 { label: 'URL Foto', key: 'foto_url', placeholder: 'https://...' },
               ].map(({ label, key, placeholder, type }) => (
-                <div key={key}>
-                  <label style={labelStyle}>{label}</label>
-                  <input type={type || 'text'} placeholder={placeholder} value={avionForm[key as keyof typeof avionForm] as string} onChange={e => setAvionForm({ ...avionForm, [key]: e.target.value })} style={inputStyle} />
-                </div>
+                <div key={key}><label style={labelStyle}>{label}</label><input type={type || 'text'} placeholder={placeholder} value={avionForm[key as keyof typeof avionForm] as string} onChange={e => setAvionForm({ ...avionForm, [key]: e.target.value })} style={inputStyle} /></div>
               ))}
-              <div>
-                <label style={labelStyle}>Tipo</label>
-                <select value={avionForm.tipo} onChange={e => setAvionForm({ ...avionForm, tipo: e.target.value })} style={inputStyle}>
-                  {['Light Jet', 'Mid-Size Jet', 'Heavy Jet'].map(t => <option key={t} value={t}>{t}</option>)}
-                </select>
-              </div>
-              <div>
-                <label style={labelStyle}>Cabina</label>
-                <select value={avionForm.cabina} onChange={e => setAvionForm({ ...avionForm, cabina: e.target.value })} style={inputStyle}>
-                  {['Alta', 'Baja'].map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <input type="checkbox" checked={avionForm.wc} onChange={e => setAvionForm({ ...avionForm, wc: e.target.checked })} />
-                <label style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14 }}>WC a bordo</label>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <input type="checkbox" checked={avionForm.sobrecargo} onChange={e => setAvionForm({ ...avionForm, sobrecargo: e.target.checked })} />
-                <label style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14 }}>Sobrecargo disponible</label>
-              </div>
+              <div><label style={labelStyle}>Tipo</label><select value={avionForm.tipo} onChange={e => setAvionForm({ ...avionForm, tipo: e.target.value })} style={inputStyle}>{['Light Jet', 'Mid-Size Jet', 'Heavy Jet'].map(t => <option key={t} value={t}>{t}</option>)}</select></div>
+              <div><label style={labelStyle}>Cabina</label><select value={avionForm.cabina} onChange={e => setAvionForm({ ...avionForm, cabina: e.target.value })} style={inputStyle}>{['Alta', 'Baja'].map(c => <option key={c} value={c}>{c}</option>)}</select></div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}><input type="checkbox" checked={avionForm.wc} onChange={e => setAvionForm({ ...avionForm, wc: e.target.checked })} /><label style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14 }}>WC a bordo</label></div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}><input type="checkbox" checked={avionForm.sobrecargo} onChange={e => setAvionForm({ ...avionForm, sobrecargo: e.target.checked })} /><label style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14 }}>Sobrecargo disponible</label></div>
             </div>
-            <button type="submit" style={{ marginTop: 20, backgroundColor: '#C9A84C', color: '#1B2A4A', border: 'none', padding: '14px 32px', borderRadius: 8, fontWeight: 700, cursor: 'pointer', fontSize: 15 }}>
-              Agregar aeronave
-            </button>
+            <button type="submit" style={{ marginTop: 20, backgroundColor: '#C9A84C', color: '#1B2A4A', border: 'none', padding: '14px 32px', borderRadius: 8, fontWeight: 700, cursor: 'pointer', fontSize: 15 }}>Agregar aeronave</button>
+          </form>
+        )}
+
+        {/* FORM VIAJE */}
+        {showForm && tab === 'viajes' && (
+          <form onSubmit={handleViajeSubmit} style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(201,168,76,0.2)', borderRadius: 12, padding: 24, marginBottom: 32 }}>
+            <h2 style={{ margin: '0 0 20px', fontSize: 18, color: '#C9A84C' }}>Nuevo Viaje</h2>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <div>
+                <label style={labelStyle}>Cliente</label>
+                <select value={viajeForm.usuario_id} onChange={e => setViajeForm({ ...viajeForm, usuario_id: e.target.value })} required style={inputStyle}>
+                  <option value="">Selecciona un cliente</option>
+                  {perfiles.map(p => (
+                    <option key={p.id} value={p.id}>{p.nombre || p.id.slice(0, 8)}</option>
+                  ))}
+                </select>
+              </div>
+              <div><label style={labelStyle}>Tipo</label><select value={viajeForm.tipo} onChange={e => setViajeForm({ ...viajeForm, tipo: e.target.value })} style={inputStyle}>{['Charter', 'Empty Leg', 'Membresía'].map(t => <option key={t} value={t}>{t}</option>)}</select></div>
+              <div><label style={labelStyle}>Origen</label><input type="text" placeholder="Ej: Toluca" value={viajeForm.origen} onChange={e => setViajeForm({ ...viajeForm, origen: e.target.value })} required style={inputStyle} /></div>
+              <div><label style={labelStyle}>Destino</label><input type="text" placeholder="Ej: Cancún" value={viajeForm.destino} onChange={e => setViajeForm({ ...viajeForm, destino: e.target.value })} required style={inputStyle} /></div>
+              <div><label style={labelStyle}>Fecha</label><input type="date" value={viajeForm.fecha} onChange={e => setViajeForm({ ...viajeForm, fecha: e.target.value })} required style={inputStyle} /></div>
+              <div><label style={labelStyle}>Aeronave</label><input type="text" placeholder="Ej: Hawker 800" value={viajeForm.aeronave} onChange={e => setViajeForm({ ...viajeForm, aeronave: e.target.value })} style={inputStyle} /></div>
+              <div><label style={labelStyle}>Precio (USD)</label><input type="number" placeholder="0" value={viajeForm.precio} onChange={e => setViajeForm({ ...viajeForm, precio: e.target.value })} style={inputStyle} /></div>
+              <div><label style={labelStyle}>Estado</label><select value={viajeForm.estado} onChange={e => setViajeForm({ ...viajeForm, estado: e.target.value })} style={inputStyle}>{['en_proceso', 'confirmado', 'completado', 'cancelado'].map(s => <option key={s} value={s}>{s.replace('_', ' ').toUpperCase()}</option>)}</select></div>
+            </div>
+            <button type="submit" style={{ marginTop: 20, backgroundColor: '#C9A84C', color: '#1B2A4A', border: 'none', padding: '14px 32px', borderRadius: 8, fontWeight: 700, cursor: 'pointer', fontSize: 15 }}>Agregar viaje</button>
           </form>
         )}
 
@@ -306,7 +325,7 @@ export default function AdminPage() {
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid rgba(201,168,76,0.2)' }}>
-                    {['Matrícula', 'Modelo', 'Tipo', 'Pax', 'WC', 'Cabina', 'Horas', 'Maletas', 'Acciones'].map(h => (
+                    {['Matrícula', 'Modelo', 'Tipo', 'Pax', 'WC', 'Cabina', 'Horas', 'Maletas', 'Foto', 'Acciones'].map(h => (
                       <th key={h} style={{ textAlign: 'left', padding: '12px 16px', fontSize: 10, color: '#C9A84C', letterSpacing: 2 }}>{h}</th>
                     ))}
                   </tr>
@@ -322,6 +341,7 @@ export default function AdminPage() {
                       <td style={{ padding: '14px 16px', color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>{a.cabina}</td>
                       <td style={{ padding: '14px 16px', color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>{a.horas_max}</td>
                       <td style={{ padding: '14px 16px', color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>{a.maletas}</td>
+                      <td style={{ padding: '14px 16px', fontSize: 13 }}>{a.foto_url ? '✓' : '—'}</td>
                       <td style={{ padding: '14px 16px' }}>
                         <button onClick={() => handleDeleteAvion(a.id)} style={{ backgroundColor: 'rgba(244,67,54,0.1)', color: '#f44336', border: '1px solid rgba(244,67,54,0.3)', borderRadius: 6, padding: '6px 12px', cursor: 'pointer', fontSize: 12 }}>Eliminar</button>
                       </td>
@@ -341,16 +361,17 @@ export default function AdminPage() {
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid rgba(201,168,76,0.2)' }}>
-                    {['Ruta', 'Fecha', 'Tipo', 'Aeronave', 'Precio', 'Estado', 'Usuario'].map(h => (
+                    {['Cliente', 'Ruta', 'Fecha', 'Tipo', 'Aeronave', 'Precio', 'Estado', 'Acciones'].map(h => (
                       <th key={h} style={{ textAlign: 'left', padding: '12px 16px', fontSize: 10, color: '#C9A84C', letterSpacing: 2 }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {viajes.length === 0 ? (
-                    <tr><td colSpan={7} style={{ padding: '24px 16px', color: 'rgba(255,255,255,0.3)', textAlign: 'center' }}>No hay viajes registrados</td></tr>
+                    <tr><td colSpan={8} style={{ padding: '24px 16px', color: 'rgba(255,255,255,0.3)', textAlign: 'center' }}>No hay viajes registrados</td></tr>
                   ) : viajes.map(v => (
                     <tr key={v.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                      <td style={{ padding: '14px 16px', color: '#C9A84C', fontSize: 13, fontWeight: 600 }}>{getNombrePerfil(v.usuario_id)}</td>
                       <td style={{ padding: '14px 16px', fontWeight: 500 }}>{v.origen} → {v.destino}</td>
                       <td style={{ padding: '14px 16px', color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>{v.fecha}</td>
                       <td style={{ padding: '14px 16px', color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>{v.tipo}</td>
@@ -364,7 +385,9 @@ export default function AdminPage() {
                           <option value="cancelado">Cancelado</option>
                         </select>
                       </td>
-                      <td style={{ padding: '14px 16px', fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>{v.usuario_id?.slice(0, 8)}...</td>
+                      <td style={{ padding: '14px 16px' }}>
+                        <button onClick={() => handleDeleteViaje(v.id)} style={{ backgroundColor: 'rgba(244,67,54,0.1)', color: '#f44336', border: '1px solid rgba(244,67,54,0.3)', borderRadius: 6, padding: '6px 12px', cursor: 'pointer', fontSize: 12 }}>Eliminar</button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
