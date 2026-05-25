@@ -58,6 +58,7 @@ export default function AdminPage() {
   const [perfiles, setPerfiles] = useState<Perfil[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [tramos, setTramos] = useState<{origen: string; destino: string; fecha: string}[]>([{ origen: '', destino: '', fecha: '' }]);
   const [vueloForm, setVueloForm] = useState({
     origen: '', destino: '', fecha: '', hora: '', precio_asiento: '', precio_cabina: '', aeronave: '', asientos: '8'
   });
@@ -97,19 +98,31 @@ export default function AdminPage() {
 };
   };
 
-  const handleVueloSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await supabase.from('empty_legs').insert([{
-      ...vueloForm,
-      precio_asiento: parseInt(vueloForm.precio_asiento),
-      precio_cabina: parseInt(vueloForm.precio_cabina),
-      asientos: parseInt(vueloForm.asientos),
-      estado: 'disponible'
+const handleViajeSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  if (viajeForm.tipo === 'Multidestino') {
+    const rutaTexto = tramos.map(t => `${t.origen} → ${t.destino} (${t.fecha})`).join(' | ');
+    const { error } = await supabaseAdmin.from('viajes').insert([{
+      usuario_id: viajeForm.usuario_id,
+      origen: tramos[0].origen,
+      destino: tramos[tramos.length - 1].destino,
+      fecha: tramos[0].fecha,
+      tipo: 'Multidestino: ' + rutaTexto,
+      aeronave: viajeForm.aeronave,
+      precio: parseInt(viajeForm.precio) || 0,
+      estado: viajeForm.estado,
     }]);
-    setVueloForm({ origen: '', destino: '', fecha: '', hora: '', precio_asiento: '', precio_cabina: '', aeronave: '', asientos: '8' });
-    setShowForm(false);
-    fetchVuelos();
-  };
+    if (error) alert('Error: ' + error.message);
+    else { setShowForm(false); setTramos([{ origen: '', destino: '', fecha: '' }]); fetchViajes(); }
+  } else {
+    const { error } = await supabaseAdmin.from('viajes').insert([{
+      ...viajeForm,
+      precio: parseInt(viajeForm.precio) || 0,
+    }]);
+    if (error) alert('Error: ' + error.message);
+    else { setViajeForm({ usuario_id: '', origen: '', destino: '', fecha: '', tipo: 'Charter', aeronave: '', precio: '', estado: 'en_proceso' }); setShowForm(false); fetchViajes(); }
+  }
+};
 
   const handleAvionSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -252,31 +265,77 @@ export default function AdminPage() {
           </form>
         )}
 
-        {/* FORM VIAJE */}
-        {showForm && tab === 'viajes' && (
-          <form onSubmit={handleViajeSubmit} style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(201,168,76,0.2)', borderRadius: 12, padding: 24, marginBottom: 32 }}>
-            <h2 style={{ margin: '0 0 20px', fontSize: 18, color: '#C9A84C' }}>Nuevo Viaje</h2>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-              <div>
-                <label style={labelStyle}>Cliente</label>
-                <select value={viajeForm.usuario_id} onChange={e => setViajeForm({ ...viajeForm, usuario_id: e.target.value })} required style={inputStyle}>
-                  <option value="">Selecciona un cliente</option>
-                  {perfiles.map(p => (
-                    <option key={p.id} value={p.id}>{p.nombre || p.id.slice(0, 8)}</option>
-                  ))}
-                </select>
-              </div>
-              <div><label style={labelStyle}>Tipo</label><select value={viajeForm.tipo} onChange={e => setViajeForm({ ...viajeForm, tipo: e.target.value })} style={inputStyle}>{['Charter', 'Empty Leg', 'Membresía'].map(t => <option key={t} value={t}>{t}</option>)}</select></div>
-              <div><label style={labelStyle}>Origen</label><input type="text" placeholder="Ej: Toluca" value={viajeForm.origen} onChange={e => setViajeForm({ ...viajeForm, origen: e.target.value })} required style={inputStyle} /></div>
-              <div><label style={labelStyle}>Destino</label><input type="text" placeholder="Ej: Cancún" value={viajeForm.destino} onChange={e => setViajeForm({ ...viajeForm, destino: e.target.value })} required style={inputStyle} /></div>
-              <div><label style={labelStyle}>Fecha</label><input type="date" value={viajeForm.fecha} onChange={e => setViajeForm({ ...viajeForm, fecha: e.target.value })} required style={inputStyle} /></div>
-              <div><label style={labelStyle}>Aeronave</label><input type="text" placeholder="Ej: Hawker 800" value={viajeForm.aeronave} onChange={e => setViajeForm({ ...viajeForm, aeronave: e.target.value })} style={inputStyle} /></div>
-              <div><label style={labelStyle}>Precio (USD)</label><input type="number" placeholder="0" value={viajeForm.precio} onChange={e => setViajeForm({ ...viajeForm, precio: e.target.value })} style={inputStyle} /></div>
-              <div><label style={labelStyle}>Estado</label><select value={viajeForm.estado} onChange={e => setViajeForm({ ...viajeForm, estado: e.target.value })} style={inputStyle}>{['en_proceso', 'confirmado', 'completado', 'cancelado'].map(s => <option key={s} value={s}>{s.replace('_', ' ').toUpperCase()}</option>)}</select></div>
+       {/* FORM VIAJE */}
+{showForm && tab === 'viajes' && (
+  <form onSubmit={handleViajeSubmit} style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(201,168,76,0.2)', borderRadius: 12, padding: 24, marginBottom: 32 }}>
+    <h2 style={{ margin: '0 0 20px', fontSize: 18, color: '#C9A84C' }}>Nuevo Viaje</h2>
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+      <div>
+        <label style={labelStyle}>Cliente</label>
+        <select value={viajeForm.usuario_id} onChange={e => setViajeForm({ ...viajeForm, usuario_id: e.target.value })} required style={inputStyle}>
+          <option value="">Selecciona un cliente</option>
+          {perfiles.map(p => (
+            <option key={p.id} value={p.id}>{p.nombre || p.id.slice(0, 8)}</option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <label style={labelStyle}>Tipo</label>
+        <select value={viajeForm.tipo} onChange={e => setViajeForm({ ...viajeForm, tipo: e.target.value })} style={inputStyle}>
+          {['Charter', 'Empty Leg', 'Membresía', 'Multidestino'].map(t => <option key={t} value={t}>{t}</option>)}
+        </select>
+      </div>
+    </div>
+
+    {/* TRAMOS */}
+    {viajeForm.tipo === 'Multidestino' ? (
+      <div style={{ marginTop: 16 }}>
+        <label style={labelStyle}>TRAMOS</label>
+        {tramos.map((tramo, i) => (
+          <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: 12, marginBottom: 10, alignItems: 'end' }}>
+            <div>
+              <label style={labelStyle}>Origen {i + 1}</label>
+              <input type="text" placeholder="Origen" value={tramo.origen} onChange={e => { const t = [...tramos]; t[i].origen = e.target.value; setTramos(t); }} style={inputStyle} />
             </div>
-            <button type="submit" style={{ marginTop: 20, backgroundColor: '#C9A84C', color: '#1B2A4A', border: 'none', padding: '14px 32px', borderRadius: 8, fontWeight: 700, cursor: 'pointer', fontSize: 15 }}>Agregar viaje</button>
-          </form>
-        )}
+            <div>
+              <label style={labelStyle}>Destino {i + 1}</label>
+              <input type="text" placeholder="Destino" value={tramo.destino} onChange={e => { const t = [...tramos]; t[i].destino = e.target.value; setTramos(t); }} style={inputStyle} />
+            </div>
+            <div>
+              <label style={labelStyle}>Fecha {i + 1}</label>
+              <input type="date" value={tramo.fecha} onChange={e => { const t = [...tramos]; t[i].fecha = e.target.value; setTramos(t); }} style={inputStyle} />
+            </div>
+            {tramos.length > 1 && (
+              <button type="button" onClick={() => setTramos(tramos.filter((_, j) => j !== i))} style={{ backgroundColor: 'rgba(244,67,54,0.1)', color: '#f44336', border: '1px solid rgba(244,67,54,0.3)', borderRadius: 6, padding: '12px', cursor: 'pointer' }}>✕</button>
+            )}
+          </div>
+        ))}
+        <button type="button" onClick={() => setTramos([...tramos, { origen: '', destino: '', fecha: '' }])} style={{ backgroundColor: 'rgba(201,168,76,0.1)', color: '#C9A84C', border: '1px solid rgba(201,168,76,0.3)', borderRadius: 8, padding: '10px 20px', cursor: 'pointer', marginTop: 8 }}>
+          + Agregar tramo
+        </button>
+      </div>
+    ) : (
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 16 }}>
+        <div><label style={labelStyle}>Origen</label><input type="text" placeholder="Ej: Toluca" value={viajeForm.origen} onChange={e => setViajeForm({ ...viajeForm, origen: e.target.value })} required style={inputStyle} /></div>
+        <div><label style={labelStyle}>Destino</label><input type="text" placeholder="Ej: Cancún" value={viajeForm.destino} onChange={e => setViajeForm({ ...viajeForm, destino: e.target.value })} required style={inputStyle} /></div>
+        <div><label style={labelStyle}>Fecha</label><input type="date" value={viajeForm.fecha} onChange={e => setViajeForm({ ...viajeForm, fecha: e.target.value })} required style={inputStyle} /></div>
+        <div><label style={labelStyle}>Aeronave</label><input type="text" placeholder="Ej: Hawker 800" value={viajeForm.aeronave} onChange={e => setViajeForm({ ...viajeForm, aeronave: e.target.value })} style={inputStyle} /></div>
+        <div><label style={labelStyle}>Precio (USD)</label><input type="number" placeholder="0" value={viajeForm.precio} onChange={e => setViajeForm({ ...viajeForm, precio: e.target.value })} style={inputStyle} /></div>
+        <div><label style={labelStyle}>Estado</label><select value={viajeForm.estado} onChange={e => setViajeForm({ ...viajeForm, estado: e.target.value })} style={inputStyle}>{['en_proceso', 'confirmado', 'completado', 'cancelado'].map(s => <option key={s} value={s}>{s.replace('_', ' ').toUpperCase()}</option>)}</select></div>
+      </div>
+    )}
+
+    {viajeForm.tipo === 'Multidestino' && (
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 16 }}>
+        <div><label style={labelStyle}>Aeronave</label><input type="text" placeholder="Ej: Hawker 800" value={viajeForm.aeronave} onChange={e => setViajeForm({ ...viajeForm, aeronave: e.target.value })} style={inputStyle} /></div>
+        <div><label style={labelStyle}>Precio (USD)</label><input type="number" placeholder="0" value={viajeForm.precio} onChange={e => setViajeForm({ ...viajeForm, precio: e.target.value })} style={inputStyle} /></div>
+        <div><label style={labelStyle}>Estado</label><select value={viajeForm.estado} onChange={e => setViajeForm({ ...viajeForm, estado: e.target.value })} style={inputStyle}>{['en_proceso', 'confirmado', 'completado', 'cancelado'].map(s => <option key={s} value={s}>{s.replace('_', ' ').toUpperCase()}</option>)}</select></div>
+      </div>
+    )}
+
+    <button type="submit" style={{ marginTop: 20, backgroundColor: '#C9A84C', color: '#1B2A4A', border: 'none', padding: '14px 32px', borderRadius: 8, fontWeight: 700, cursor: 'pointer', fontSize: 15 }}>Agregar viaje</button>
+  </form>
+)}
 
         {/* TABLA EMPTY LEGS */}
         {tab === 'empty-legs' && (
