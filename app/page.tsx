@@ -97,7 +97,7 @@ export default function AdminPage() {
       </div>
 
       <div style={{ display: 'flex', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingLeft: 32 }}>
-        {[{ key: 'empty-legs', label: 'Empty Legs' }, { key: 'flota', label: 'Nuestra Flota' }, { key: 'viajes', label: 'Viajes' }, { key: 'notificaciones', label: '🔔 Notificaciones' }].map(t => (
+        {[{ key: 'empty-legs', label: 'Empty Legs' }, { key: 'flota', label: 'Nuestra Flota' }, { key: 'viajes', label: 'Viajes' }, { key: 'notificaciones', label: ' Notificaciones' }].map(t => (
           <button key={t.key} onClick={() => { setTab(t.key); setShowForm(false); }} style={{ padding: '16px 24px', border: 'none', backgroundColor: 'transparent', color: tab === t.key ? '#C9A84C' : 'rgba(255,255,255,0.4)', borderBottom: tab === t.key ? '2px solid #C9A84C' : '2px solid transparent', cursor: 'pointer', fontSize: 13, fontWeight: tab === t.key ? 700 : 400, letterSpacing: 1 }}>
             {t.label}
           </button>
