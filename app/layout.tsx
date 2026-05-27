@@ -1,20 +1,20 @@
+cat > ~/patriot-admin/app/layout.tsx << 'EOF'
 'use client';
 import { useState } from 'react';
 import './globals.css';
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({ children, params }: { children: React.ReactNode; params?: any }) {
   const [pass, setPass] = useState('');
   const [auth, setAuth] = useState(false);
   const [error, setError] = useState(false);
 
-  const handleLogin = () => {
-    if (pass === 'Patriot2026') {
-      setAuth(true);
-    } else {
-      setError(true);
-      setPass('');
-    }
-  };
+  if (typeof window !== 'undefined' && window.location.pathname === '/privacidad') {
+    return (
+      <html lang="es">
+        <body style={{ margin: 0 }}>{children}</body>
+      </html>
+    );
+  }
 
   if (!auth) {
     return (
@@ -29,11 +29,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 placeholder="Contraseña"
                 value={pass}
                 onChange={e => { setPass(e.target.value); setError(false); }}
-                onKeyDown={e => e.key === 'Enter' && handleLogin()}
+                onKeyDown={e => e.key === 'Enter' && (() => { if (pass === 'Patriot2026') { setAuth(true); } else { setError(true); setPass(''); } })()}
                 style={{ width: '100%', backgroundColor: 'rgba(255,255,255,0.06)', border: error ? '1px solid #f44336' : '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '14px 16px', color: 'white', fontSize: 14, boxSizing: 'border-box', marginBottom: 12, outline: 'none' }}
               />
               {error && <p style={{ color: '#f44336', fontSize: 12, margin: '0 0 12px' }}>Contraseña incorrecta</p>}
-              <button onClick={handleLogin} style={{ width: '100%', backgroundColor: '#C9A84C', color: '#1B2A4A', border: 'none', padding: '14px', borderRadius: 8, fontWeight: 700, cursor: 'pointer', fontSize: 15 }}>
+              <button onClick={() => { if (pass === 'Patriot2026') { setAuth(true); } else { setError(true); setPass(''); } }} style={{ width: '100%', backgroundColor: '#C9A84C', color: '#1B2A4A', border: 'none', padding: '14px', borderRadius: 8, fontWeight: 700, cursor: 'pointer', fontSize: 15 }}>
                 Entrar
               </button>
             </div>
@@ -49,3 +49,4 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     </html>
   );
 }
+EOF
