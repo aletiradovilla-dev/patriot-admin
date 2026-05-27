@@ -19,6 +19,8 @@ export default function AdminPage() {
   const [vueloForm, setVueloForm] = useState({ origen: '', destino: '', fecha: '', hora: '', precio_asiento: '', precio_cabina: '', aeronave: '', asientos: '8' });
   const [avionForm, setAvionForm] = useState({ matricula: '', modelo: '', tipo: 'Mid-Size Jet', pasajeros: '8', wc: true, cabina: 'Alta', horas_max: '5h', maletas: '8', sobrecargo: false, foto_url: '', estado: 'disponible' });
   const [viajeForm, setViajeForm] = useState({ usuario_id: '', origen: '', destino: '', fecha: '', tipo: 'Charter', aeronave: '', precio: '', estado: 'en_proceso' });
+  const [notiForm, setNotiForm] = useState({ titulo: '', mensaje: '', usuario_id: 'todos' });
+  const [notiEnviada, setNotiEnviada] = useState(false);
 
   useEffect(() => { fetchVuelos(); fetchFlota(); fetchViajes(); fetchPerfiles(); }, []);
 
@@ -55,6 +57,20 @@ export default function AdminPage() {
     }
   };
 
+  const handleNotiSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (notiForm.usuario_id === 'todos') {
+      const inserts = perfiles.map(p => ({ usuario_id: p.id, titulo: notiForm.titulo, mensaje: notiForm.mensaje }));
+      const { error } = await supabaseAdmin.from('notificaciones').insert(inserts);
+      if (error) alert('Error: ' + error.message);
+      else { setNotiEnviada(true); setNotiForm({ titulo: '', mensaje: '', usuario_id: 'todos' }); setTimeout(() => setNotiEnviada(false), 4000); }
+    } else {
+      const { error } = await supabaseAdmin.from('notificaciones').insert([{ usuario_id: notiForm.usuario_id, titulo: notiForm.titulo, mensaje: notiForm.mensaje }]);
+      if (error) alert('Error: ' + error.message);
+      else { setNotiEnviada(true); setNotiForm({ titulo: '', mensaje: '', usuario_id: 'todos' }); setTimeout(() => setNotiEnviada(false), 4000); }
+    }
+  };
+
   const handleDeleteVuelo = async (id: number) => { if (!confirm('Eliminar?')) return; await supabase.from('empty_legs').delete().eq('id', id); fetchVuelos(); };
   const handleDeleteAvion = async (id: number) => { if (!confirm('Eliminar?')) return; await supabase.from('flota').delete().eq('id', id); fetchFlota(); };
   const handleDeleteViaje = async (id: number) => { if (!confirm('Eliminar?')) return; await supabase.from('viajes').delete().eq('id', id); fetchViajes(); };
@@ -73,18 +89,24 @@ export default function AdminPage() {
           <h1 style={{ margin: 0, fontSize: 24, fontWeight: 300, letterSpacing: 4 }}>PATRIOT</h1>
           <p style={{ margin: 0, fontSize: 10, color: '#C9A84C', letterSpacing: 6 }}>AVIATION ADMIN</p>
         </div>
-        <button onClick={() => setShowForm(!showForm)} style={{ backgroundColor: '#C9A84C', color: '#1B2A4A', border: 'none', padding: '12px 24px', borderRadius: 8, fontWeight: 700, cursor: 'pointer', fontSize: 14 }}>
-          {showForm ? 'Cancelar' : tab === 'empty-legs' ? '+ Nuevo Empty Leg' : tab === 'flota' ? '+ Nueva Aeronave' : '+ Nuevo Viaje'}
-        </button>
+        {tab !== 'notificaciones' && (
+          <button onClick={() => setShowForm(!showForm)} style={{ backgroundColor: '#C9A84C', color: '#1B2A4A', border: 'none', padding: '12px 24px', borderRadius: 8, fontWeight: 700, cursor: 'pointer', fontSize: 14 }}>
+            {showForm ? 'Cancelar' : tab === 'empty-legs' ? '+ Nuevo Empty Leg' : tab === 'flota' ? '+ Nueva Aeronave' : '+ Nuevo Viaje'}
+          </button>
+        )}
       </div>
+
       <div style={{ display: 'flex', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingLeft: 32 }}>
-        {[{ key: 'empty-legs', label: 'Empty Legs' }, { key: 'flota', label: 'Nuestra Flota' }, { key: 'viajes', label: 'Viajes' }].map(t => (
+        {[{ key: 'empty-legs', label: 'Empty Legs' }, { key: 'flota', label: 'Nuestra Flota' }, { key: 'viajes', label: 'Viajes' }, { key: 'notificaciones', label: '🔔 Notificaciones' }].map(t => (
           <button key={t.key} onClick={() => { setTab(t.key); setShowForm(false); }} style={{ padding: '16px 24px', border: 'none', backgroundColor: 'transparent', color: tab === t.key ? '#C9A84C' : 'rgba(255,255,255,0.4)', borderBottom: tab === t.key ? '2px solid #C9A84C' : '2px solid transparent', cursor: 'pointer', fontSize: 13, fontWeight: tab === t.key ? 700 : 400, letterSpacing: 1 }}>
             {t.label}
           </button>
         ))}
       </div>
+
       <div style={{ padding: '32px' }}>
+
+        {/* FORM EMPTY LEG */}
         {showForm && tab === 'empty-legs' && (
           <form onSubmit={handleVueloSubmit} style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(201,168,76,0.2)', borderRadius: 12, padding: 24, marginBottom: 32 }}>
             <h2 style={{ margin: '0 0 20px', fontSize: 18, color: '#C9A84C' }}>Nuevo Empty Leg</h2>
@@ -101,6 +123,8 @@ export default function AdminPage() {
             <button type="submit" style={{ marginTop: 20, backgroundColor: '#C9A84C', color: '#1B2A4A', border: 'none', padding: '14px 32px', borderRadius: 8, fontWeight: 700, cursor: 'pointer', fontSize: 15 }}>Publicar vuelo</button>
           </form>
         )}
+
+        {/* FORM FLOTA */}
         {showForm && tab === 'flota' && (
           <form onSubmit={handleAvionSubmit} style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(201,168,76,0.2)', borderRadius: 12, padding: 24, marginBottom: 32 }}>
             <h2 style={{ margin: '0 0 20px', fontSize: 18, color: '#C9A84C' }}>Nueva Aeronave</h2>
@@ -116,6 +140,8 @@ export default function AdminPage() {
             <button type="submit" style={{ marginTop: 20, backgroundColor: '#C9A84C', color: '#1B2A4A', border: 'none', padding: '14px 32px', borderRadius: 8, fontWeight: 700, cursor: 'pointer', fontSize: 15 }}>Agregar aeronave</button>
           </form>
         )}
+
+        {/* FORM VIAJE */}
         {showForm && tab === 'viajes' && (
           <form onSubmit={handleViajeSubmit} style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(201,168,76,0.2)', borderRadius: 12, padding: 24, marginBottom: 32 }}>
             <h2 style={{ margin: '0 0 20px', fontSize: 18, color: '#C9A84C' }}>Nuevo Viaje</h2>
@@ -165,6 +191,40 @@ export default function AdminPage() {
             <button type="submit" style={{ marginTop: 20, backgroundColor: '#C9A84C', color: '#1B2A4A', border: 'none', padding: '14px 32px', borderRadius: 8, fontWeight: 700, cursor: 'pointer', fontSize: 15 }}>Agregar viaje</button>
           </form>
         )}
+
+        {/* NOTIFICACIONES */}
+        {tab === 'notificaciones' && (
+          <div>
+            <form onSubmit={handleNotiSubmit} style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(201,168,76,0.2)', borderRadius: 12, padding: 24, marginBottom: 32 }}>
+              <h2 style={{ margin: '0 0 20px', fontSize: 18, color: '#C9A84C' }}>Enviar Notificacion</h2>
+              <div style={{ display: 'grid', gap: 16 }}>
+                <div>
+                  <label style={labelStyle}>Destinatario</label>
+                  <select value={notiForm.usuario_id} onChange={e => setNotiForm({ ...notiForm, usuario_id: e.target.value })} style={inputStyle}>
+                    <option value="todos">Todos los usuarios</option>
+                    {perfiles.map(p => <option key={p.id} value={p.id}>{p.nombre || p.id.slice(0, 8)}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={labelStyle}>Titulo</label>
+                  <input type="text" placeholder="Ej: Empty Leg a NYC en Julio" value={notiForm.titulo} onChange={e => setNotiForm({ ...notiForm, titulo: e.target.value })} required style={inputStyle} />
+                </div>
+                <div>
+                  <label style={labelStyle}>Mensaje</label>
+                  <textarea placeholder="Ej: Tenemos un vuelo disponible Toluca - Nueva York el 15 de julio desde $1,200 USD por asiento. Cupo limitado." value={notiForm.mensaje} onChange={e => setNotiForm({ ...notiForm, mensaje: e.target.value })} required style={{ ...inputStyle, height: 120, resize: 'vertical' as const }} />
+                </div>
+              </div>
+              {notiEnviada && (
+                <div style={{ marginTop: 16, padding: '12px 16px', backgroundColor: 'rgba(76,175,80,0.1)', border: '1px solid rgba(76,175,80,0.3)', borderRadius: 8, color: '#4CAF50', fontSize: 13 }}>
+                  Notificacion enviada exitosamente
+                </div>
+              )}
+              <button type="submit" style={{ marginTop: 16, backgroundColor: '#C9A84C', color: '#1B2A4A', border: 'none', padding: '14px 32px', borderRadius: 8, fontWeight: 700, cursor: 'pointer', fontSize: 15 }}>Enviar notificacion</button>
+            </form>
+          </div>
+        )}
+
+        {/* TABLA EMPTY LEGS */}
         {tab === 'empty-legs' && (
           <>
             <h2 style={{ fontSize: 18, color: 'rgba(255,255,255,0.5)', marginBottom: 16, fontWeight: 300 }}>Empty Legs ({vuelos.length})</h2>
@@ -190,6 +250,8 @@ export default function AdminPage() {
             </div>
           </>
         )}
+
+        {/* TABLA FLOTA */}
         {tab === 'flota' && (
           <>
             <h2 style={{ fontSize: 18, color: 'rgba(255,255,255,0.5)', marginBottom: 16, fontWeight: 300 }}>Flota ({flota.length})</h2>
@@ -216,6 +278,8 @@ export default function AdminPage() {
             </div>
           </>
         )}
+
+        {/* TABLA VIAJES */}
         {tab === 'viajes' && (
           <>
             <h2 style={{ fontSize: 18, color: 'rgba(255,255,255,0.5)', marginBottom: 16, fontWeight: 300 }}>Viajes ({viajes.length})</h2>
@@ -242,6 +306,7 @@ export default function AdminPage() {
             </div>
           </>
         )}
+
       </div>
     </div>
   );
