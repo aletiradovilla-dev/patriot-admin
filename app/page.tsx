@@ -23,6 +23,8 @@ const [notiForm, setNotiForm] = useState({ titulo: '', mensaje: '', usuario_id: 
 const [notiEnviada, setNotiEnviada] = useState(false);
 const [showEditModal, setShowEditModal] = useState(false);
 const [editVuelo, setEditVuelo] = useState<EmptyLeg | null>(null);
+const [buscarCliente, setBuscarCliente] = useState('');
+const [buscarNoti, setBuscarNoti] = useState('');
 
 useEffect(() => { fetchVuelos(); fetchFlota(); fetchViajes(); fetchPerfiles(); }, []);
 
@@ -94,6 +96,9 @@ const handleEditVuelo = async (e: React.FormEvent) => {
   setEditVuelo(null);
   fetchVuelos();
 };
+
+const perfilesFiltradosViaje = perfiles.filter(p => !buscarCliente || p.nombre?.toLowerCase().includes(buscarCliente.toLowerCase()));
+const perfilesFiltradosNoti = perfiles.filter(p => !buscarNoti || p.nombre?.toLowerCase().includes(buscarNoti.toLowerCase()));
 
 const inputStyle = { width: '100%', backgroundColor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '12px 14px', color: 'white', fontSize: 14, boxSizing: 'border-box' as const };
 const labelStyle = { display: 'block', fontSize: 11, color: 'rgba(255,255,255,0.4)', marginBottom: 6, letterSpacing: 1 };
@@ -182,9 +187,10 @@ return (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
             <div>
               <label style={labelStyle}>Cliente</label>
-              <select value={viajeForm.usuario_id} onChange={e => setViajeForm({ ...viajeForm, usuario_id: e.target.value })} required style={inputStyle}>
+              <input type="text" placeholder="Buscar cliente..." value={buscarCliente} onChange={e => { setBuscarCliente(e.target.value); setViajeForm({ ...viajeForm, usuario_id: '' }); }} style={{ ...inputStyle, marginBottom: 4 }} />
+              <select value={viajeForm.usuario_id} onChange={e => { setViajeForm({ ...viajeForm, usuario_id: e.target.value }); setBuscarCliente(perfiles.find(p => p.id === e.target.value)?.nombre || ''); }} required style={inputStyle}>
                 <option value="">Selecciona un cliente</option>
-                {perfiles.map(p => <option key={p.id} value={p.id}>{p.nombre || p.id.slice(0, 8)}</option>)}
+                {perfilesFiltradosViaje.map(p => <option key={p.id} value={p.id}>{p.nombre || p.id.slice(0, 8)}</option>)}
               </select>
             </div>
             <div>
@@ -233,9 +239,10 @@ return (
             <div style={{ display: 'grid', gap: 16 }}>
               <div>
                 <label style={labelStyle}>Destinatario</label>
-                <select value={notiForm.usuario_id} onChange={e => setNotiForm({ ...notiForm, usuario_id: e.target.value })} style={inputStyle}>
+                <input type="text" placeholder="Buscar usuario..." value={buscarNoti} onChange={e => { setBuscarNoti(e.target.value); setNotiForm({ ...notiForm, usuario_id: 'todos' }); }} style={{ ...inputStyle, marginBottom: 4 }} />
+                <select value={notiForm.usuario_id} onChange={e => { setNotiForm({ ...notiForm, usuario_id: e.target.value }); setBuscarNoti(e.target.value === 'todos' ? '' : perfiles.find(p => p.id === e.target.value)?.nombre || ''); }} style={inputStyle}>
                   <option value="todos">Todos los usuarios</option>
-                  {perfiles.map(p => <option key={p.id} value={p.id}>{p.nombre || p.id.slice(0, 8)}</option>)}
+                  {perfilesFiltradosNoti.map(p => <option key={p.id} value={p.id}>{p.nombre || p.id.slice(0, 8)}</option>)}
                 </select>
               </div>
               <div>
